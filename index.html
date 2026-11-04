@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CineLivre</title>
+<style>
+:root{--bg:#0b0820;--bg2:#17103a;--card:#1d1547;--line:#3a2d7a;--t:#f4f1ff;--mut:#a79fd6;--ac:#ff3d81;--ac2:#7c5cff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:radial-gradient(circle at 20% 0,#2a1a6e 0,var(--bg) 55%) fixed;color:var(--t);font-family:"Trebuchet MS",Verdana,sans-serif;min-height:100vh}
+#fx{position:fixed;inset:0;z-index:0;pointer-events:none}
+header,main{position:relative;z-index:1}
+header{display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(11,8,32,.85);backdrop-filter:blur(8px);position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line)}
+h1{font-size:1.5rem;flex:1;letter-spacing:.5px;background:linear-gradient(90deg,var(--ac),var(--ac2));-webkit-background-clip:text;background-clip:text;color:transparent}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:10px 16px;color:#fff;background:linear-gradient(90deg,var(--ac),var(--ac2));font-weight:700}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--t)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.av{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--ac)}
+.av.big{width:72px;height:72px;align-self:center}
+#burger{font-size:1.5rem;padding:6px 12px;line-height:1}
+#menu{position:fixed;top:0;right:-290px;width:280px;height:100%;background:var(--bg2);border-left:1px solid var(--line);z-index:8;padding:20px;transition:right .25s;display:flex;flex-direction:column;gap:12px}
+#menu.open{right:0}
+#menu p{color:var(--mut);font-size:.9rem}
+main{max-width:1000px;margin:0 auto;padding:16px}
+#search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--t);font:inherit;margin-bottom:16px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer}
+.card img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:#000}
+.card div{padding:8px 10px;font-size:.9rem;font-weight:700}
+.card small{display:block;color:var(--mut);font-weight:400}
+.empty{color:var(--mut);text-align:center;padding:40px 0;grid-column:1/-1}
+.modal{position:fixed;inset:0;background:rgba(5,3,20,.88);z-index:10;display:none;overflow:auto;padding:16px}
+.modal.open{display:block}
+.box{max-width:520px;margin:20px auto;background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.box input,.box textarea{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--t);font:inherit}
+.box label{font-size:.85rem;color:var(--mut)}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:.85rem}
+.chk input{width:auto;margin-top:3px}
+.box img.cap{width:140px;border-radius:12px;align-self:center}
+video{width:100%;border-radius:12px;background:#000;max-height:60vh}
+#msg{color:#ffd166;font-size:.9rem;min-height:1.2em}
+progress{width:100%}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<header>
+  <h1>CineLivre</h1>
+  <button id="loginBtn">Entrar com Google</button>
+  <img id="avH" class="av" alt="Sua foto" referrerpolicy="no-referrer" style="display:none">
+  <button id="burger" class="ghost" aria-label="Menu">&#9776;</button>
+</header>
+
+<aside id="menu">
+  <button class="ghost" id="closeMenu">Fechar</button>
+  <img id="avM" class="av big" alt="Sua foto" referrerpolicy="no-referrer" style="display:none">
+  <p id="who">Você não entrou ainda.</p>
+  <button id="openPub">Publicar vídeo</button>
+  <button class="ghost" id="logoutBtn" style="display:none">Sair</button>
+</aside>
+
+<div id="err" style="display:none;position:relative;z-index:6;margin:10px 16px;padding:12px;border-radius:12px;background:#4a1020;border:1px solid #ff3d81;font-size:.9rem;word-break:break-word"></div>
+<main>
+  <input id="search" placeholder="Buscar filme, série ou anime">
+  <div id="grid"><p class="empty">Carregando...</p></div>
+</main>
+
+<!-- Entrar -->
+<div class="modal" id="loginM"><div class="box">
+  <h2>Entrar</h2>
+  <label>E-mail</label><input id="lEmail" type="email" autocomplete="email">
+  <label>Senha (mínimo 6 caracteres)</label><input id="lPass" type="password" autocomplete="current-password">
+  <button id="lIn">Entrar</button>
+  <button class="ghost" id="lUp">Criar conta</button>
+  <button class="ghost" id="lReset">Esqueci a senha</button>
+  <button class="ghost" id="lGoogle">Entrar com Google</button>
+  <button class="ghost" data-close="loginM">Cancelar</button>
+</div></div>
+
+<!-- Publicar -->
+<div class="modal" id="pubM"><div class="box">
+  <h2>Publicar vídeo</h2>
+  <label>Nome do filme, série ou anime</label><input id="pTitle" maxlength="80">
+  <label>Descrição</label><textarea id="pDesc" rows="3" maxlength="500"></textarea>
+  <label>Capa (imagem da galeria)</label><input id="pCover" type="file" accept="image/*">
+  <label>Vídeo (galeria ou pastas)</label><input id="pVideo" type="file" accept="video/*">
+  <label>Senha do vídeo (deixe vazio para não ter senha)</label><input id="pPass" maxlength="40">
+  <label>Link de encurtador (opcional, abre como anúncio antes do vídeo)</label><input id="pShort" placeholder="https://...">
+  <label>Visibilidade</label><input value="Público" disabled>
+  <div class="chk"><input type="checkbox" id="pRights"><span>Tenho o direito de publicar este conteúdo e aceito que ele pode ser denunciado e removido.</span></div>
+  <progress id="prog" value="0" max="100" style="display:none"></progress>
+  <div id="msg"></div>
+  <button id="pSend">Publicar</button>
+  <button class="ghost" data-close="pubM">Cancelar</button>
+</div></div>
+
+<!-- Assistir -->
+<div class="modal" id="watchM"><div class="box">
+  <h2 id="wTitle"></h2>
+  <div id="wBody"></div>
+  <p id="wDesc" style="color:var(--mut)"></p>
+  <button class="ghost" id="wReport">Denunciar</button>
+  <button class="ghost" id="wDel" style="display:none">Apagar</button>
+  <button class="ghost" data-close="watchM">Fechar</button>
+</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script>
+/* ====== 1) COLE AQUI o firebaseConfig do seu projeto ====== */
+const firebaseConfig = {
+  apiKey: "COLE_AQUI", authDomain: "COLE_AQUI", projectId: "COLE_AQUI",
+  storageBucket: "COLE_AQUI", messagingSenderId: "COLE_AQUI", appId: "COLE_AQUI"
+};
+/* ====== 2) Seu e-mail Google: só você pode apagar qualquer vídeo ====== */
+const ADMIN_EMAIL = "seuemail@gmail.com";
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth(), db = firebase.firestore(), st = firebase.storage();
+const $ = id => document.getElementById(id);
+let user = null, all = [], cur = null;
+
+/* partículas brancas */
+(function(){
+  const c = $("fx"), x = c.getContext("2d"); let W, H, P = [];
+  const rs = () => { W = c.width = innerWidth; H = c.height = innerHeight; }; rs(); addEventListener("resize", rs);
+  for (let i = 0; i < 70; i++) P.push({x: Math.random()*W, y: Math.random()*H, r: Math.random()*2+.5, v: Math.random()*.6+.2, d: Math.random()*2-1});
+  if (matchMedia("(prefers-reduced-motion:reduce)").matches) return;
+  (function f(){ x.clearRect(0,0,W,H); x.fillStyle = "rgba(255,255,255,.75)";
+    P.forEach(p => { p.y -= p.v; p.x += p.d*.3; if (p.y < -5) { p.y = H+5; p.x = Math.random()*W; }
+      x.beginPath(); x.arc(p.x, p.y, p.r, 0, 7); x.fill(); });
+    requestAnimationFrame(f); })();
+})();
+
+/* menu e modais */
+$("burger").onclick = () => $("menu").classList.add("open");
+$("closeMenu").onclick = () => $("menu").classList.remove("open");
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => { $(b.dataset.close).classList.remove("open"); if (b.dataset.close === "watchM") $("wBody").innerHTML = ""; });
+$("openPub").onclick = () => { if (!user) { $("menu").classList.remove("open"); return $("loginM").classList.add("open"); } $("menu").classList.remove("open"); $("pubM").classList.add("open"); };
+
+/* login Google */
+function showErr(t){ const e = $("err"); e.style.display = ""; e.textContent = t; }
+function checkCfg(){
+  const c = firebaseConfig;
+  if (Object.values(c).some(v => !v || /COLE_AQUI/.test(v))) return "Você ainda não colou o firebaseConfig completo no código.";
+  if (!/^[a-z0-9-]+\.(firebaseapp\.com|web\.app)$/i.test(c.authDomain)) return "authDomain errado: está \"" + c.authDomain + "\". O certo é parecido com seuprojeto.firebaseapp.com (sem https:// e sem github.io).";
+  return "";
+}
+function loginGoogle(){
+  const bad = checkCfg(); if (bad) return showErr(bad);
+  if (location.protocol === "file:") return alert("O login com Google não funciona abrindo o arquivo direto. Hospede no GitHub Pages e abra pelo link https://.");
+  if (/; wv\)|WebView|FBAN|FBAV|Instagram|TikTok/i.test(navigator.userAgent)) alert("Você está em um navegador dentro de outro app. O Google bloqueia login aí. Abra o link no Chrome.");
+  const pr = new firebase.auth.GoogleAuthProvider(); pr.setCustomParameters({prompt: "select_account"});
+  auth.signInWithPopup(pr).catch(e => {
+    showErr("Erro: " + e.code + " | domínio do site: " + location.hostname + " | authDomain: " + firebaseConfig.authDomain);
+    if (["auth/popup-blocked","auth/operation-not-supported-in-this-environment"].includes(e.code)) return auth.signInWithRedirect(pr);
+    if (e.code === "auth/popup-closed-by-user") return;
+    if (e.code === "auth/unauthorized-domain") return alert("Domínio não autorizado. No Firebase, vá em Authentication > Configurações > Domínios autorizados e adicione o domínio deste site.");
+    if (e.code === "auth/operation-not-allowed") return alert("Ative o login com Google em Authentication > Método de login no Firebase.");
+    alert("Erro no login: " + e.code + " - " + e.message);
+  });
+}
+$("loginBtn").onclick = () => $("loginM").classList.add("open");
+$("lGoogle").onclick = loginGoogle;
+function mailErr(e){
+  const m = {"auth/invalid-email":"E-mail inválido.","auth/missing-password":"Digite a senha.","auth/weak-password":"Senha fraca. Use pelo menos 6 caracteres.","auth/email-already-in-use":"Esse e-mail já tem conta. Use Entrar.","auth/invalid-credential":"E-mail ou senha incorretos.","auth/user-not-found":"E-mail ou senha incorretos.","auth/wrong-password":"E-mail ou senha incorretos.","auth/operation-not-allowed":"Ative E-mail/Senha em Authentication > Método de login no Firebase.","auth/too-many-requests":"Muitas tentativas. Espere um pouco."};
+  alert(m[e.code] || ("Erro: " + e.code));
+}
+function mailCfg(){ const bad = checkCfg(); if (bad) { showErr(bad); return false; } return true; }
+$("lIn").onclick = () => { if (mailCfg()) auth.signInWithEmailAndPassword($("lEmail").value.trim(), $("lPass").value).then(() => $("loginM").classList.remove("open")).catch(mailErr); };
+$("lUp").onclick = () => { if (mailCfg()) auth.createUserWithEmailAndPassword($("lEmail").value.trim(), $("lPass").value).then(() => $("loginM").classList.remove("open")).catch(mailErr); };
+$("lReset").onclick = () => { if (mailCfg()) auth.sendPasswordResetEmail($("lEmail").value.trim()).then(() => alert("Enviamos um link para o seu e-mail.")).catch(mailErr); };
+auth.getRedirectResult().catch(e => alert("Erro no login: " + e.code + " - " + e.message));
+$("logoutBtn").onclick = () => auth.signOut();
+auth.onAuthStateChanged(u => {
+  user = u;
+  $("loginBtn").style.display = u ? "none" : "";
+  $("logoutBtn").style.display = u ? "" : "none";
+  $("who").textContent = u ? "Logado como " + (u.displayName || u.email) : "Você não entrou ainda.";
+  ["avH","avM"].forEach(i => { const a = $(i); if (u && u.photoURL) { a.src = u.photoURL; a.style.display = ""; } else a.style.display = "none"; });
+});
+
+/* lista */
+db.collection("videos").orderBy("created", "desc").limit(200).onSnapshot(s => {
+  all = s.docs.map(d => ({id: d.id, ...d.data()})); render();
+}, e => { $("grid").innerHTML = '<p class="empty">Não foi possível carregar. Confira o firebaseConfig e as regras.</p>'; });
+$("search").oninput = render;
+function esc(t){ const d = document.createElement("div"); d.textContent = t; return d.innerHTML; }
+function render(){
+  const q = $("search").value.toLowerCase();
+  const l = all.filter(v => v.title.toLowerCase().includes(q));
+  $("grid").innerHTML = l.length ? "" : '<p class="empty">Nenhum vídeo ainda. Abra o menu e publique o primeiro.</p>';
+  l.forEach(v => {
+    const c = document.createElement("div"); c.className = "card";
+    c.innerHTML = `<img src="${esc(v.cover)}" alt=""><div>${esc(v.title)}<small>${v.locked ? "Com senha" : "Sem senha"}</small></div>`;
+    c.onclick = () => openVideo(v); $("grid").appendChild(c);
+  });
+}
+
+/* sha256 */
+async function sha(t){ const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join(""); }
+
+/* assistir */
+function openVideo(v){
+  cur = v; $("wTitle").textContent = v.title; $("wDesc").textContent = v.desc || "";
+  $("wDel").style.display = user && (user.uid === v.uid || user.email === ADMIN_EMAIL) ? "" : "none";
+  const b = $("wBody"); b.innerHTML = ""; $("watchM").classList.add("open");
+  const step3 = url => { b.innerHTML = ""; const el = document.createElement("video"); el.controls = true; el.autoplay = true; el.src = url; b.appendChild(el); };
+  const step2 = async () => {
+    if (!v.locked) return step3(v.url);
+    b.innerHTML = '<input id="pw" type="password" placeholder="Senha do vídeo" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--t)"><button id="pwOk" style="margin-top:8px">Desbloquear</button><p id="pwErr" style="color:#ff8a8a"></p>';
+    $("pwOk").onclick = async () => {
+      try { const h = await sha(v.id + ":" + $("pw").value);
+        const d = await db.collection("videos").doc(v.id).collection("unlock").doc(h).get();
+        if (d.exists) step3(d.data().url); else $("pwErr").textContent = "Senha incorreta.";
+      } catch (e) { $("pwErr").textContent = "Senha incorreta."; }
+    };
+  };
+  if (v.short) {
+    b.innerHTML = '<button id="adBtn">Assistir</button><p style="color:var(--mut);font-size:.85rem;margin-top:6px">Um anúncio vai abrir. Volte aqui depois de vê-lo.</p>';
+    $("adBtn").onclick = () => { window.open(v.short, "_blank", "noopener"); b.innerHTML = '<button id="adDone">Já vi o anúncio, continuar</button>'; $("adDone").onclick = step2; };
+  } else step2();
+}
+$("wReport").onclick = async () => {
+  if (!user) return alert("Entre na sua conta para denunciar.");
+  await db.collection("reports").add({vid: cur.id, by: user.uid, at: Date.now()}); alert("Denúncia enviada.");
+};
+$("wDel").onclick = async () => {
+  if (!confirm("Apagar este vídeo?")) return;
+  try { const u = await db.collection("videos").doc(cur.id).collection("unlock").get(); for (const d of u.docs) await d.ref.delete(); } catch (e) {}
+  await db.collection("videos").doc(cur.id).delete();
+  $("watchM").classList.remove("open"); $("wBody").innerHTML = "";
+};
+
+/* publicar */
+function up(path, file, onp){ return new Promise((res, rej) => {
+  const t = st.ref(path).put(file);
+  t.on("state_changed", s => onp && onp(s.bytesTransferred / s.totalBytes), rej, async () => res(await t.snapshot.ref.getDownloadURL()));
+}); }
+$("pSend").onclick = async () => {
+  const m = $("msg"), title = $("pTitle").value.trim(), cover = $("pCover").files[0], vid = $("pVideo").files[0];
+  const pass = $("pPass").value, short = $("pShort").value.trim();
+  if (!title || !cover || !vid) return m.textContent = "Preencha o nome, a capa e o vídeo.";
+  if (short && !/^https?:\/\//i.test(short)) return m.textContent = "O link do encurtador precisa começar com http:// ou https://";
+  if (!$("pRights").checked) return m.textContent = "Marque a confirmação de direitos.";
+  $("pSend").disabled = true; $("prog").style.display = ""; m.textContent = "Enviando...";
+  try {
+    const ref = db.collection("videos").doc(), id = ref.id, base = "videos/" + user.uid + "/" + id + "/";
+    const coverUrl = await up(base + "capa", cover);
+    const vidUrl = await up(base + "video", vid, p => $("prog").value = p * 100);
+    const data = {title, desc: $("pDesc").value.trim(), cover: coverUrl, uid: user.uid, locked: !!pass, short: short || "", created: Date.now()};
+    if (pass) { await ref.set(data); await ref.collection("unlock").doc(await sha(id + ":" + pass)).set({url: vidUrl}); }
+    else { data.url = vidUrl; await ref.set(data); }
+    m.textContent = "Publicado!"; ["pTitle","pDesc","pCover","pVideo","pPass","pShort"].forEach(i => $(i).value = "");
+    $("pRights").checked = false; $("pubM").classList.remove("open");
+  } catch (e) { m.textContent = "Erro ao publicar: " + e.message; }
+  $("pSend").disabled = false; $("prog").style.display = "none";
+};
+</script>
+</body>
+</html>
+<!--
+REGRAS DO FIRESTORE (Firebase > Firestore > Regras). Troque seuemail@gmail.com:
+rules_version = '2';
+service cloud.firestore { match /databases/{d}/documents {
+  match /videos/{id} {
+    allow read: if true;
+    allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+    allow delete: if request.auth != null && (resource.data.uid == request.auth.uid || request.auth.token.email == 'seuemail@gmail.com');
+    match /unlock/{h} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+  }
+  match /reports/{r} { allow create: if request.auth != null; }
+}}
+
+REGRAS DO STORAGE (Firebase > Storage > Regras):
+rules_version = '2';
+service firebase.storage { match /b/{b}/o {
+  match /videos/{uid}/{allPaths=**} {
+    allow read: if true;
+    allow write: if request.auth != null && request.auth.uid == uid && request.resource.size < 500 * 1024 * 1024;
+  }
+}}
+-->
